@@ -55,7 +55,7 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order=3, alpha=1e-8,use_decay_
     :param number_cycles: int
         number of cycles to run the model
     :param init: str
-        initialization of component functions (naive or using polynomial interpolations in 1D spaces): default is naive
+        initialization of component functions ("naive" or "poly" using polynomial interpolations in 1D spaces): default is naive
     :param plot_error_bars: string
         if the user want to plot or not the error bars (default is "no")
     :param mixe: string
@@ -63,25 +63,28 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order=3, alpha=1e-8,use_decay_
     :param optimizer: string
         if the user want to use optimizer then should name the optimizer (default is None)
     """
-    all_combos = np.array(list(itertools.combinations(X_train, order)))
+    all_combos = np.array(list(itertools.combinations(X_train, order))) # return all combinations of component functions
     mean = y_train.mean()
     if init == 'naive':
-        yc = (1 / all_combos.shape[0]) * mean * np.ones((X_train.shape[0], all_combos.shape[0]))  # initialize the matrix for the of component functions to zeros, shape is n*D
+        component_function_train = (1 / all_combos.shape[0]) * mean * np.ones((X_train.shape[0], all_combos.shape[0]))  # initialize the matrix for the of component functions to zeros, shape is n*D
     if init == 'poly':
-        yc = np.ones((X_train.shape[0], all_combos.shape[
+        component_function_train = np.ones((X_train.shape[0], all_combos.shape[
             0]))  # initialize the matrix for the of component functions to zeros, shape is n*D
         for i in range(0, all_combos.shape[0]):
             x = pd.DataFrame(X_train)[all_combos[i][0]]
             print(x.ndim)
             f = np.polyfit(x, y_train, 3)
             f = np.poly1d(f)
-            yc[:, i] = f(x)  # use interpolation function returned by `interp1d`
-    ###define at first one GPR to the D component functions
+            component_function_train[:, i] = f(x)  # use interpolation function returned by `interp1d`
+        print('Polynomial initialization used to initialize component functions')
 
+    # Kernel bloc
     l = length_scale
     rbf = RBF(length_scale=l, length_scale_bounds=(1e-2, 1e2))  # + WhiteKernel(noise_level=1e-05)
     GPR = [GaussianProcessRegressor(kernel=rbf, alpha=alpha, optimizer=optimizer) for i in
            range(0, all_combos.shape[0])]
+
+    # Train bloc
     for k in range(number_cycles):
         print('cycle number', k + 1)
         if use_decay_alpha == 'yes':
@@ -98,31 +101,33 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order=3, alpha=1e-8,use_decay_
                        range(0, all_combos.shape[0])]
 
         for i in range(0, all_combos.shape[0]):  # loop for in range the number of component functions
-            vect = y_train - sumcol(yc, i)
-            yc[:,i] = vect  # step1: output - inititializations ( but note here sir, for the zero initialization yc(1)=the output y)
-            xx = pd.DataFrame(X_train)[all_combos[i]]  # just reshapint the input to be adequate with the model
-            GPR[i].fit(xx, yc[:, i])  # fit
+            vect = y_train - sumcol(component_function_train, i)
+            component_function_train[:,i] = vect  # step1: output - inititializations
+            xx = pd.DataFrame(X_train)[all_combos[i]]  # just reshape the input to be adequate with the model
+            GPR[i].fit(xx, component_function_train[:, i])  # fit
             if mixe == 'yes':
-                yc[:, i] = (GPR[i].predict(xx) + vect) / 2
+                component_function_train[:, i] = (GPR[i].predict(xx) + vect) / 2
             else:
-                yc[:, i] = GPR[i].predict(xx)  # predict to re use yc
-            # print('hyper parameters are:', GPR[i].kernel_)
-        rmse_train = rmse(y_train * scale_factor, sumcol(yc, 10000)*scale_factor)
+                component_function_train[:, i] = GPR[i].predict(xx)  # predict to re use component_function_train
+        rmse_train = rmse(y_train * scale_factor, sumcol(component_function_train, 10000)*scale_factor)
         print('train rmse', rmse_train)  ## compute rmse (it is computed on y_train)
 
-    yct = np.zeros((X_test.shape[0], all_combos.shape[0]))
+    # Test bloc
+    component_function_test = np.zeros((X_test.shape[0], all_combos.shape[0]))
     errorbars = np.zeros((X_test.shape[0], all_combos.shape[0]))
     for i in range(0, all_combos.shape[0]):  # loop for in range the number of component functions
-        # yct[:,i]=y_test-sumcol(yct,i)# step1: output - inititializations
         xt = pd.DataFrame(X_test)[all_combos[i]]  # just reshapint the input to be adequate with the model
-        yct[:, i], errorbars[:, i] = GPR[i].predict(xt, return_std=True)  # predict to re use yct
+        component_function_test[:, i], errorbars[:, i] = GPR[i].predict(xt, return_std=True)  # predict to re use component_function_test
         errorbars[:, i]=errorbars[:, i] * errorbars[:, i]
-    ypred = sumcol(yct, 10000)
+    ypred = sumcol(component_function_test, 10000)
     y_pred_scaled = ypred * scale_factor
     error_bars= np.sqrt(sumcol(errorbars,5000))
-    print('order of the HDMR is', order)
     rmse_test = rmse(y_test * scale_factor, ypred * scale_factor)
     print('test rmse', rmse_test)
+
+    print('order of the HDMR is', order)
+
+    # Figures bloc
     fig, ax1 = plt.subplots()
     ax1.plot(y_test * scale_factor, y_pred_scaled, 'bo', markersize=1)
     ax1.set_xlabel('Target', fontsize=14)
@@ -136,16 +141,20 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order=3, alpha=1e-8,use_decay_
         ax3.set_ylabel('Predictions', fontsize=14)
         ax3.grid(True)
         plt.show(block=True)
-    return rmse_train, rmse_test, sumcol(yct, 50000), GPR, y_pred_scaled, error_bars * scale_factor
+
+    return rmse_train, rmse_test, sumcol(component_function_test, 50000), GPR, y_pred_scaled, error_bars * scale_factor
 
 if __name__ == '__main__':
-    #New 6d dataset
+    # 6D Dataset read
     df =pd.read_table('E:/Graduation internship/datas/bondSobol120000pts.dat',header=None,delimiter=r"\s+")
     x = df.iloc[:, 0:6]
     y = df.iloc[:, -1]
     scale_factor=y.max()-y.min()
     X = (x-x.min())/(x.max()-x.min())
     y = (y-y.min())/(y.max()-y.min())
+
+    #Split the data into train and test
     X_train, X_test, y_train, y_test= train_test_split(X, y,train_size=0.03, test_size=0.1,random_state=42)
+
     HDMR = RS_HDMR_GPR(X_train, y_train, X_test, y_test, order=3, alpha=1e-5,use_decay_alpha='yes', scale_factor=scale_factor, length_scale=0.6,
                 number_cycles=5, init='poly', plot_error_bars='yes', mixe='no', optimizer=None)
