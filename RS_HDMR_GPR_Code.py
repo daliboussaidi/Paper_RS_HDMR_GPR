@@ -8,10 +8,10 @@ import itertools
 
 
 #### define a function that computes rmse
-def rmse(ypred, ytest, scale_factor):
+def rmse(ypred, ytest):
     Sqerr = np.power(ytest - ypred, 2)
     MSE = np.sum(Sqerr)
-    rmse = scale_factor * np.sqrt(MSE / ytest.size)
+    rmse = np.sqrt(MSE / ytest.size)
     return rmse
 
 
@@ -29,8 +29,8 @@ def sumcol(F, j):
     return s
 
 
-def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order=3, alpha=1e-8,use_decay_alpha='no', scale_factor=1, length_scale=0.6,
-            number_cycles=10, init='naive',plot_error_bars='no', mixe='no', optimizer=None):
+def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-8, use_decay_alpha = 'no', scale_factor = 1, length_scale = 0.6,
+            number_cycles = 10, init = 'naive', plot_error_bars = 'no', mixe = 'no', optimizer = None):
     """
     This function fits  a RS-HDMR-GPR to data using independent Gaussian Processes for component functions. GPR is used from the python package GaussianProcessRegressor from sklearn.
     :parameters of the function are:
@@ -110,7 +110,7 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order=3, alpha=1e-8,use_decay_
             else:
                 component_function_train[:, i] = GPR[i].predict(xx)  # predict to re use component_function_train
         rmse_train = rmse(y_train * scale_factor, sumcol(component_function_train, 10000)*scale_factor)
-        print('train rmse', rmse_train)  ## compute rmse (it is computed on y_train)
+        print('train rmse', rmse_train)  # compute rmse (it is computed on y_train)
 
     # Test bloc
     component_function_test = np.zeros((X_test.shape[0], all_combos.shape[0]))
@@ -121,7 +121,7 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order=3, alpha=1e-8,use_decay_
         errorbars[:, i]=errorbars[:, i] * errorbars[:, i]
     ypred = sumcol(component_function_test, 10000)
     y_pred_scaled = ypred * scale_factor
-    error_bars= np.sqrt(sumcol(errorbars,5000))
+    error_bars= np.sqrt(sumcol(errorbars, 5000))
     rmse_test = rmse(y_test * scale_factor, ypred * scale_factor)
     print('test rmse', rmse_test)
 
@@ -149,12 +149,11 @@ if __name__ == '__main__':
     df =pd.read_table('E:/Graduation internship/datas/bondSobol120000pts.dat',header=None,delimiter=r"\s+")
     x = df.iloc[:, 0:6]
     y = df.iloc[:, -1]
-    scale_factor=y.max()-y.min()
+    scale_factor = y.max()-y.min()
     X = (x-x.min())/(x.max()-x.min())
     y = (y-y.min())/(y.max()-y.min())
 
     #Split the data into train and test
     X_train, X_test, y_train, y_test= train_test_split(X, y,train_size=0.03, test_size=0.1,random_state=42)
 
-    HDMR = RS_HDMR_GPR(X_train, y_train, X_test, y_test, order=3, alpha=1e-5,use_decay_alpha='yes', scale_factor=scale_factor, length_scale=0.6,
-                number_cycles=5, init='poly', plot_error_bars='yes', mixe='no', optimizer=None)
+    HDMR = RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-5, use_decay_alpha = 'yes', scale_factor = scale_factor, length_scale=0.6, number_cycles = 5, init = 'poly', plot_error_bars = 'yes', mixe = 'no', optimizer = None)
