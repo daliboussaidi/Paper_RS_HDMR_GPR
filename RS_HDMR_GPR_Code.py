@@ -97,7 +97,6 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-8, use_d
             0]))  # initialize the matrix for the of component functions to zeros, shape is n*D
         for i in range(0, all_combos.shape[0]):
             x = pd.DataFrame(X_train)[all_combos[i][0]]
-            print(x.ndim)
             f = np.polyfit(x, y_train, 3)
             f = np.poly1d(f)
             component_function_train[:, i] = f(x)  # use interpolation function returned by `interp1d`
