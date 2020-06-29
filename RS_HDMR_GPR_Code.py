@@ -24,6 +24,13 @@ import itertools
 
 #### define a function that computes rmse
 def rmse(ypred, ytest):
+    """
+    This function computes the root mean square error of two vectors
+    :param ypred: array
+    vector1
+    :param ytest: array
+    vector2
+    """
     Sqerr = np.power(ytest - ypred, 2)
     MSE = np.sum(Sqerr)
     rmse = np.sqrt(MSE / ytest.size)
@@ -33,7 +40,11 @@ def rmse(ypred, ytest):
 
 def sumcol(F, j):
     """"
-    define a function to sum the  columns of a data except column with index i
+    define a function to sum the  columns of a data except column with index j
+    :param F: DataFrame or numpy 
+    :param i: int
+    the indice to exclude from the sum
+
     """
     s = np.zeros(F.shape[0])
     for i in range(F.shape[1]):
@@ -160,8 +171,8 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-8, use_d
     return rmse_train, rmse_test, GPR, y_pred_scaled, error_bars * scale_factor
 
 if __name__ == '__main__':
-    # 6D Dataset read
-    df =pd.read_table('E:/Graduation internship/datas/bondSobol120000pts.dat',header=None,delimiter=r"\s+")
+    # 6D Dataset read: this will allow the user to read any data in which the first n columns are the input data and the n+1 column is the target variable
+    df =pd.read_table('bondSobol120000pts.dat',header=None,delimiter=r"\s+")
     x = df.iloc[:, 0:6]
     y = df.iloc[:, -1]
     scale_factor = y.max()-y.min()
