@@ -182,6 +182,8 @@ if __name__ == '__main__':
 
     HDMR = RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-5, use_decay_alpha = 'yes', scale_factor = scale_factor, length_scale=0.6, number_cycles = 5, init = 'poly', plot_error_bars = 'yes', mixe = 'no', optimizer = None)
     # Create a .dat file from the data readed with an extra column for the predictions
-    df[df.shape[1]] = HDMR[3]
-    df.to_numpy()
-    np.savetxt('bondSobol120000pts_RS_HDM_GPR.dat', df, fmt='%13.4f', delimiter='\t')
+    test_file = X_test.copy()
+    test_file[X_test.shape[1]] = y_test * scale_factor
+    test_file[test_file.shape[1]] = HDMR[3]
+    test_file.to_numpy()
+    np.savetxt('bondSobol120000pts_RS_HDM_GPR.dat', test_file, fmt='%13.4f', delimiter='\t')
