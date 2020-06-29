@@ -1,16 +1,18 @@
 """
+Tatest version can be obtained from GitHub: https://github.com/daliboussaidi/Paper_RS_HDMR_GPR
+
 Function RS_HDMR_GPR fits RS-HDMR-GPR to data using independent Gaussian Process Regression for component functions. 
 Each line of the dataset is a fitting point - first columns are coords, and the last
 column is the function value. A list of requiered packages are imported such as numpy, matplotlib, pandas, sklearn.
 
 For example, call:
 HDMR = RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-5, use_decay_alpha = 'yes', scale_factor = scale_factor, length_scale=0.6, number_cycles = 10, init = 'poly', plot_error_bars = 'yes', mixe = 'no', optimizer = None)
-to fit 3rd order HDMD from a 6 dimension dataset using a number of train and test points specified by the user (can be set from the function train_test_split from sklearn.model_selection)
+to fit 3rd order HDMR from a 6 dimension dataset (file 'bondSobol120000pts.dat' read in in the example below, see line ) using a number of train and test points specified by the user (can be set from the function train_test_split from sklearn.model_selection)
 the tain points will be drawn randomly from the same file), using 3 dimensional Gaussian Process Regression, cycling 5 times through all
 component functions, using polynomial initialization to the component functions. A noise level of 1e-5 will be used and decayed from cycle to cycle until 1e-11 (use_decay_alpha = 'yes').
 Error bars will be plotted in this example and the optimizer won't be used. 
-The function will return respectively (5 oupputs); the rmse on the trainset, rmse on the validation/test set, the GPR vector in case the user wants to use it laterly, the predictions vector of the target variables and error bars vector.
-As well as 2 plots; the first corresponds to the correlation plots ( target and predictions) the second plot is correlation plot with error bars.
+The function will return respectively (5 outputs): the rmse on the trainset, rmse on the validation/test set, the GPR vector for any later use, the predictions vector of the target variables and error bars vector.
+The program will plot 2 plots; the first corresponds to the correlation plots (predictions vs targets), the second plot is correlation plot with error bars.
 
 """
 import itertools
@@ -157,6 +159,8 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-8, use_d
     ax1.set_xlabel('Target', fontsize=14)
     ax1.set_ylabel('Predictions', fontsize=14)
     ax1.grid(True)
+    namefig = str(order) + "RS_HDMR_GPR_" + str(rmse_test)+ '.png'
+    plt.savefig(namefig, format='png', dpi=1200, bbox_inches='tight')
     plt.show(block=True)
     if plot_error_bars == 'yes':
         fig, ax3 = plt.subplots()
@@ -164,6 +168,8 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-8, use_d
         ax3.set_xlabel('Target', fontsize=14)
         ax3.set_ylabel('Predictions', fontsize=14)
         ax3.grid(True)
+        namefig = str(order) + "RS_HDMR_GPR_" + str(rmse_test) + "_error_bars" + '.png'
+        plt.savefig(namefig, format='png', dpi=1200, bbox_inches='tight')        
         plt.show(block=True)
 
     return rmse_train, rmse_test, GPR, y_pred_scaled, error_bars * scale_factor
@@ -181,7 +187,8 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test= train_test_split(X, y,train_size=0.03, test_size=0.1,random_state=42)
 
     HDMR = RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-5, use_decay_alpha = 'yes', scale_factor = scale_factor, length_scale=0.6, number_cycles = 5, init = 'poly', plot_error_bars = 'yes', mixe = 'no', optimizer = None)
-    # Create a .dat file from the data readed with an extra column for the predictions
+    
+    # Create a .dat file from the test data with an extra column for the predictions
     test_file = X_test.copy()
     test_file[X_test.shape[1]] = y_test * scale_factor
     test_file[test_file.shape[1]] = HDMR[3]
