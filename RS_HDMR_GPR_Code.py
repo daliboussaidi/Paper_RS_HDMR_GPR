@@ -13,16 +13,16 @@ The function will return respectively (5 oupputs); the rmse on the trainset, rms
 As well as 2 plots; the first corresponds to the correlation plots ( target and predictions) the second plot is correlation plot with error bars.
 
 """
-import numpy as np
+import itertools
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel, RBF, WhiteKernel
-import pandas as pd
 from sklearn.model_selection import train_test_split
-import itertools
 
 
-#### define a function that computes rmse
+# define a function that computes rmse
 def rmse(ypred, ytest):
     """
     This function computes the root mean square error of two vectors
@@ -37,11 +37,10 @@ def rmse(ypred, ytest):
     return rmse
 
 
-
 def sumcol(F, j):
-    """"
+    """
     define a function to sum the  columns of a data except column with index j
-    :param F: DataFrame or numpy 
+    :param F: DataFrame or numpy array 
     :param i: int
     the indice to exclude from the sum
 
@@ -183,3 +182,7 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test= train_test_split(X, y,train_size=0.03, test_size=0.1,random_state=42)
 
     HDMR = RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-5, use_decay_alpha = 'yes', scale_factor = scale_factor, length_scale=0.6, number_cycles = 5, init = 'poly', plot_error_bars = 'yes', mixe = 'no', optimizer = None)
+    # Create a .dat file from the data readed with an extra column for the predictions
+    df[df.shape[1]] = HDMR[3]
+    df.to_numpy()
+    np.savetxt('bondSobol120000pts_RS_HDM_GPR.dat', df, fmt='%13.4f', delimiter='\t')
