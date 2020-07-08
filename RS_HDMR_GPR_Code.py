@@ -132,9 +132,9 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-8, use_d
             xx = pd.DataFrame(X_train)[all_combos[i]]  # just reshape the input to be adequate with the model
             GPR[i].fit(xx, component_function_train[:, i])  # fit
             if mixe == 'yes':
-                component_function_train[:, i] = (GPR[i].predict(xx) + vect) / 2
+                component_function_train[:, i] = (GPR[i].predict(xx) * (0.5 + 0.5 * (k + 1) / number_cycles) + vect) / 2
             else:
-                component_function_train[:, i] = GPR[i].predict(xx)  # predict to re use component_function_train
+                component_function_train[:, i] = GPR[i].predict(xx) * (0.5 + 0.5 * (k + 1) / number_cycles)  # predict to re use component_function_train
         rmse_train = rmse(y_train * scale_factor, sumcol(component_function_train, 10000)*scale_factor)
         print('train rmse', rmse_train)  # compute rmse (it is computed on y_train)
 
