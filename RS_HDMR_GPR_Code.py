@@ -13,7 +13,7 @@ component functions, using polynomial initialization to the component functions.
 Error bars will be plotted in this example and the optimizer won't be used. 
 The function will return respectively (5 outputs): the rmse on the trainset, rmse on the validation/test set, the GPR vector for any later use, the predictions vector of the target variables and error bars vector.
 The program will plot 2 plots; the first corresponds to the correlation plots (predictions vs targets), the second plot is correlation plot with error bars.
-
+Note that if you use scaledown, naturally, convergence will take more cycles.
 """
 import itertools
 import matplotlib.pyplot as plt
@@ -111,6 +111,8 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-8, use_d
            range(0, all_combos.shape[0])]
 
     # Train bloc
+    rmse_train = []
+    maxscaledowncycle = int(number_cycles / 3)
     for k in range(number_cycles):
         print('cycle number', k + 1)
         if use_decay_alpha == 'yes':
@@ -132,11 +134,17 @@ def RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-8, use_d
             xx = pd.DataFrame(X_train)[all_combos[i]]  # just reshape the input to be adequate with the model
             GPR[i].fit(xx, component_function_train[:, i])  # fit
             if mixe == 'yes':
-                component_function_train[:, i] = (GPR[i].predict(xx) * (0.5 + 0.5 * (k + 1) / number_cycles) + vect) / 2
+                component_function_train[:, i] = (GPR[i].predict(xx) * min(1, ((k + 1) / maxscaledowncycle) + 0.5) + vect) / 2
             else:
-                component_function_train[:, i] = GPR[i].predict(xx) * (0.5 + 0.5 * (k + 1) / number_cycles)  # predict to re use component_function_train
-        rmse_train = rmse(y_train * scale_factor, sumcol(component_function_train, 10000)*scale_factor)
-        print('train rmse', rmse_train)  # compute rmse (it is computed on y_train)
+                component_function_train[:, i] = GPR[i].predict(xx) * min(1, ((k + 1) / maxscaledowncycle) + 0.5)  # predict to re use component_function_train multiplied by the scale down.
+        rmse_train.append(rmse(y_train * scale_factor, sumcol(component_function_train, 10000)*scale_factor))
+        print ('train rmse',rmse_train[k]) # compute rmse (it is computed on y_train)
+    fig, ax1 = plt.subplots()
+    ax1.plot(range(number_cycles), rmse_train, markersize=3)
+    ax1.set_xlabel('number of cycles', fontsize=14)
+    ax1.set_ylabel('fit_rmse', fontsize=14)
+    ax1.grid(True)
+    namefig = str(order) + "RS_HDMR_GPR_RMSE_convergence_fit" + '.png'
 
     # Test bloc
     component_function_test = np.zeros((X_test.shape[0], all_combos.shape[0]))
@@ -186,7 +194,7 @@ if __name__ == '__main__':
     #Split the data into train and test
     X_train, X_test, y_train, y_test= train_test_split(X, y,train_size=0.03, test_size=0.1,random_state=42)
 
-    HDMR = RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-5, use_decay_alpha = 'yes', scale_factor = scale_factor, length_scale=0.6, number_cycles = 5, init = 'poly', plot_error_bars = 'yes', mixe = 'no', optimizer = None)
+    HDMR = RS_HDMR_GPR(X_train, y_train, X_test, y_test, order = 3, alpha = 1e-5, use_decay_alpha = 'yes', scale_factor = scale_factor, length_scale=0.6, number_cycles = 20, init = 'poly', plot_error_bars = 'yes', mixe = 'no', optimizer = None)
     
     # Create a .dat file from the test data with an extra column for the predictions
     test_file = X_test.copy()
