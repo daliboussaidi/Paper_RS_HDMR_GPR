@@ -1,5 +1,5 @@
 """
-Tatest version can be obtained from GitHub: https://github.com/daliboussaidi/Paper_RS_HDMR_GPR
+Latest version can be obtained from GitHub: https://github.com/daliboussaidi/Paper_RS_HDMR_GPR
 
 Function RS_HDMR_GPR fits RS-HDMR-GPR to data using independent Gaussian Process Regression for component functions. 
 Each line of the dataset is a fitting point - first columns are coords, and the last
